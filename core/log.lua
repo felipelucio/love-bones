@@ -170,6 +170,23 @@ end
 local LogCanvasDriver = {}
 LogCanvasDriver.__index = LogCanvasDriver
 
+function LogConsoleDriver:addMessage(msg, level)
+	level = level or LogLevel.NOTSET
+	local lvl_name = ""
+	if self.options.canvas.show_level then
+		lvl_name = LogLevel_getName(level)
+		if lvl_name ~= "" then
+			lvl_name = "[" .. lvl_name .. "] "
+		end
+	end
+
+	print(lvl_name .. msg)
+end
+
+function LogConsoleDriver:draw()
+	
+end
+
 ---Constructor
 ---@param options LogOptions
 ---@return LogCanvasDriver

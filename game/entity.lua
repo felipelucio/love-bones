@@ -8,6 +8,8 @@ local Point = require('core.point')
 ---@field actor Actor
 ---@field ai ActorAI
 ---@field animation Animation
+---@field item Item
+---@field container Container
 local Entity = {}
 Entity.__index = Entity
 
@@ -21,6 +23,8 @@ function Entity.new()
         actor = nil,
         ai = nil,
         animation = nil,
+        item = nil,
+        container = nil,
     })
 end
 

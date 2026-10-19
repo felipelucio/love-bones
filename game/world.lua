@@ -9,6 +9,8 @@ local Stack = require('core.stack')
 ---@field tile_id integer
 ---@field passable boolean
 ---@field stack Stack
+---@field stack_height integer
+---@field actor Entity
 local WorldCell = {}
 WorldCell.__index = WorldCell
 
@@ -18,7 +20,53 @@ function WorldCell.new(chunk)
         tile_id = 0,
         passable = false,
         stack = Stack.new(),
+        stack_height = 0,
+        actor = nil,
     }, WorldCell)
+end
+
+---Add entity to cell
+---@param entity Entity
+---@return boolean
+function WorldCell:add(entity)
+    if entity.actor ~= nil then
+        if self.actor ~= nil then
+            return false
+        end
+        self.actor = entity
+        self.passable = false
+    elseif entity.item ~= nil then
+        if self.stack:add(entity) then
+            self.stack_height = self.stack_height + entity.item.height
+            if self.stack_height > 1 then
+                self.passable = false
+            end
+            return true
+        end
+    end
+    return false
+end
+
+---Add entity to cell
+---@param entity Entity
+---@return boolean
+function WorldCell:remove(entity)
+    if entity.actor.parent.id == entity.id then
+        self.actor = nil
+        self.passable = true
+        return true
+    elseif entity.item ~= nil then
+        if self.stack:remove(entity) then
+            self.stack_height = self.stack_height - entity.item.height
+            if self.stack_height > 1 then
+                self.passable = false
+            else
+                self.passable = true
+            end
+            return true
+        end
+    end
+    return false
 end
 
 ----------------------------------------
@@ -66,16 +114,15 @@ end
 ---@param pos Point World Position
 ---@return WorldCell
 function WorldChunk:getCell(pos)
-    local posx = pos.x - self.pos.x
-    local posy = pos.y - self.pos.y
-    local posz = pos.z - self.pos.z
+    local posx = math.floor(pos.x / self.pos.x) + 1
+    local posy = math.floor(pos.y / self.pos.y) + 1
+    local posz = math.floor(pos.z / self.pos.z) + 1
     if posx < 1 or posx > self.size.x
         or posy < 1 or posy > self.size.y
         or posz < 1 or posz > self.size.z
     then
         love.logger:error("WorldChunk:getCell out of bounds")
     end
-    print(posx, posy, posz)
     return self.cells[posz][posy][posx]
 end
 
@@ -105,8 +152,8 @@ end
 ---@param size Point
 ---@param chunk_size integer
 function World:init(size, chunk_size)
-    local xchunks = math.ceil(size.x / chunk_size)
-    local ychunks = math.ceil(size.y / chunk_size)
+    local xchunks = math.floor(size.x / chunk_size)
+    local ychunks = math.floor(size.y / chunk_size)
     self.chunks = {}
     self.size = size
     self.chunk_size = chunk_size
@@ -124,20 +171,45 @@ end
 
 ---Get chunk by position
 ---@param pos Point
----@return WorldChunk
+---@return WorldChunk|nil
 function World:getChunk(pos)
-    local x = math.floor(pos.x / self.chunk_size) + 1
-    local y = math.floor(pos.y / self.chunk_size) + 1
-    print(x, y)
+    if pos.x < 1 or pos.x > self.size.x
+        or pos.y < 1 or pos.y > self.size.y
+        or pos.z < 1 or pos.z > self.size.z
+    then
+        love.logger:error("World:getChunk is out of bounds!")
+        return
+    end
+    local x = math.ceil(pos.x / (self.chunk_size))
+    local y = math.ceil(pos.y / (self.chunk_size))
     return self.chunks[y][x]
 end
 
 ---Get Cell
 ---@param pos Point
----@return WorldCell
+---@return WorldCell|nil
 function World:getCell(pos)
     local chunk = self:getChunk(pos)
-    return chunk:getCell(pos)
+    if chunk ~= nil then
+        return chunk:getCell(pos)
+    end
+end
+
+---Get Cell relative to another one
+---@param pos Point
+---@param rel Point
+---@return WorldCell|nil
+function World:getCellRelative(pos, rel)
+    local rpos = Point.new(pos.x + rel.x, pos.y + rel.y, pos.z + rel.z)
+    return self:getCell(rpos)
+end
+
+---Check if cell can be occupied
+---@param pos Point
+---@return boolean
+function World:canMove(pos)
+    local cell = self:getCell(pos)
+    return cell.passable
 end
 
 return World
