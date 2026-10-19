@@ -1,5 +1,7 @@
+local Render = require('core.render').getInstance()
 local Point = require('core.point')
 local Stack = require('core.stack')
+local Camera = require('game.camera')
 ---------------------------------------
 ---------- WorldCell ------------------
 ---------------------------------------
@@ -134,16 +136,19 @@ end
 ---@field chunks table<table<WorldChunk>>
 ---@field size Point
 ---@field chunk_size integer
+---@field camera Camera
 local World = {}
 World.__index = World
 
 ---Constructor
 ---@return World
 function World.new()
+    local tW, tH = Render:getSizeTiles()
     local o = setmetatable({
         chunks = {},
         size = Point.new(0, 0, 0),
         chunk_size = 0,
+        camera = Camera.new(Point.new(tW, tH, 1)),
     }, World)
     return o
 end
