@@ -38,7 +38,7 @@ function TestScene:init()
         self.world:addEntity(enem)
     end
 
-    for i = 1, 1000 do
+    for i = 1, 10000 do
         local enem = Entity.new()
         enem.position.x = Random.int(1, 100)
         enem.position.y = Random.int(1, 100)

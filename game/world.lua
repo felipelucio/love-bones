@@ -81,6 +81,7 @@ end
 ---@field size Point
 ---@field cells table<WorldCell>
 ---@field entities table<string, Entity>
+---@field active boolean
 local WorldChunk = {}
 WorldChunk.__index = WorldChunk
 
@@ -95,6 +96,7 @@ function WorldChunk.new(world, pos, size)
         size = size,
         cells = {},
         entities = {},
+        active = false,
    }, WorldChunk)
    o:clear()
    return o
@@ -259,17 +261,34 @@ function World:removeEntity(entity)
     end
 end
 
----Update the world state
----@param dt number
-function World:update(dt)
+---Update the active chunks indicator
+---@private
+function World:updateActiveChunks()
     local start_x = math.ceil(self.camera.center.x / self.chunk_size)
     local end_x = math.ceil((self.camera.center.x + self.camera.size.x) / self.chunk_size)
     local start_y = math.ceil(self.camera.center.y / self.chunk_size)
     local end_y = math.ceil((self.camera.center.y + self.camera.size.y) / self.chunk_size)
-    for y = start_y, end_y do
-        for x = start_x, end_x do
+    for y = 1, #self.chunks do
+        for x = 1, #self.chunks[y] do
             local chunk = self.chunks[y][x]
-            if chunk then
+            if x >= start_x and x <= end_x and y >= start_y and y <= end_y then
+                chunk.active = true
+            else
+                chunk.active = false
+            end
+        end
+    end
+end
+
+---Update the world state
+---@param dt number
+function World:update(dt)
+    self:updateActiveChunks()
+
+    for y = 1, #self.chunks do
+        for x = 1, #self.chunks[y] do
+            local chunk = self.chunks[y][x]
+            if chunk and chunk.active then
                 for _, ent in pairs(chunk.entities) do
                     ent:update(dt)
                 end
@@ -280,14 +299,10 @@ end
 
 ---Draw the world
 function World:draw()
-    local start_x = math.ceil(self.camera.center.x / self.chunk_size)
-    local end_x = math.ceil((self.camera.center.x + self.camera.size.x) / self.chunk_size)
-    local start_y = math.ceil(self.camera.center.y / self.chunk_size)
-    local end_y = math.ceil((self.camera.center.y + self.camera.size.y) / self.chunk_size)
-    for y = start_y, end_y do
-        for x = start_x, end_x do
+    for y = 1, #self.chunks do
+        for x = 1, #self.chunks[y] do
             local chunk = self.chunks[y][x]
-            if chunk then
+            if chunk and chunk.active then
                 for _, ent in pairs(chunk.entities) do
                     ent:draw()
                 end
