@@ -80,6 +80,7 @@ end
 ---@field pos Point
 ---@field size Point
 ---@field cells table<WorldCell>
+---@field entities table<string, Entity>
 local WorldChunk = {}
 WorldChunk.__index = WorldChunk
 
@@ -93,6 +94,7 @@ function WorldChunk.new(world, pos, size)
         pos = pos,
         size = size,
         cells = {},
+        entities = {},
    }, WorldChunk)
    o:clear()
    return o
@@ -128,6 +130,22 @@ function WorldChunk:getCell(pos)
     return self.cells[posz][posy][posx]
 end
 
+---Add entity to the chunk
+---@param entity Entity
+function WorldChunk:addEntity(entity)
+    if self.entities[entity.id] == nil then
+        self.entities[entity.id] = entity
+    end
+end
+
+---Remove entity from the chunk
+---@param entity Entity
+function WorldChunk:removeEntity(entity)
+    if self.entities[entity.id] ~= nil then
+        self.entities[entity.id] = nil
+    end
+end
+
 --------------------------------
 ------------ WORLD -------------
 --------------------------------
@@ -137,6 +155,8 @@ end
 ---@field size Point
 ---@field chunk_size integer
 ---@field camera Camera
+---@field entities table<string, Entity>
+---@field hero Entity
 local World = {}
 World.__index = World
 
@@ -149,6 +169,8 @@ function World.new()
         size = Point.new(0, 0, 0),
         chunk_size = 0,
         camera = Camera.new(Point.new(tW, tH, 1)),
+        entities = {},
+        hero = nil,
     }, World)
     return o
 end
@@ -182,7 +204,7 @@ function World:getChunk(pos)
         or pos.y < 1 or pos.y > self.size.y
         or pos.z < 1 or pos.z > self.size.z
     then
-        love.logger:error("World:getChunk is out of bounds!")
+        love.logger:error(("World:getChunk (%d, %d, %d) is out of bounds!"):format(pos.x, pos.y, pos.z))
         return
     end
     local x = math.ceil(pos.x / (self.chunk_size))
@@ -215,6 +237,63 @@ end
 function World:canMove(pos)
     local cell = self:getCell(pos)
     return cell.passable
+end
+
+---Add entity to the world
+---@param entity Entity
+function World:addEntity(entity)
+    if self.entities[entity.id] == nil then
+        self.entities[entity.id] = entity
+        local chunk = self:getChunk(entity.position)
+        chunk:addEntity(entity)
+    end
+end
+
+---Remove entity from the world
+---@param entity Entity
+function World:removeEntity(entity)
+    if self.entities[entity.id] ~= nil then
+        local chunk = self:getChunk(entity.position)
+        chunk:removeEntity(entity)
+        self.entities[entity.id] = nil
+    end
+end
+
+---Update the world state
+---@param dt number
+function World:update(dt)
+    local start_x = math.ceil(self.camera.center.x / self.chunk_size)
+    local end_x = math.ceil((self.camera.center.x + self.camera.size.x) / self.chunk_size)
+    local start_y = math.ceil(self.camera.center.y / self.chunk_size)
+    local end_y = math.ceil((self.camera.center.y + self.camera.size.y) / self.chunk_size)
+    for y = start_y, end_y do
+        for x = start_x, end_x do
+            local chunk = self.chunks[y][x]
+            if chunk then
+                for _, ent in pairs(chunk.entities) do
+                    ent:update(dt)
+                end
+            end
+        end
+    end
+end
+
+---Draw the world
+function World:draw()
+    local start_x = math.ceil(self.camera.center.x / self.chunk_size)
+    local end_x = math.ceil((self.camera.center.x + self.camera.size.x) / self.chunk_size)
+    local start_y = math.ceil(self.camera.center.y / self.chunk_size)
+    local end_y = math.ceil((self.camera.center.y + self.camera.size.y) / self.chunk_size)
+    for y = start_y, end_y do
+        for x = start_x, end_x do
+            local chunk = self.chunks[y][x]
+            if chunk then
+                for _, ent in pairs(chunk.entities) do
+                    ent:draw()
+                end
+            end
+        end
+    end
 end
 
 return World

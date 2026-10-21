@@ -1,4 +1,4 @@
-local Lume = require('libs.lume')
+local Lume = require('libs.lume.lume')
 local Point = require('core.point')
 
 ---@class Entity
@@ -25,7 +25,7 @@ function Entity.new()
         animation = nil,
         item = nil,
         container = nil,
-    })
+    }, Entity)
 end
 
 ---Check if entity has a given component
@@ -33,6 +33,18 @@ end
 ---@return boolean
 function Entity:hasComponent(comp)
    return self[comp] ~= nil
+end
+
+function Entity:update(dt)
+    if self.animation then
+        self.animation:update(dt)
+    end
+end
+
+function Entity:draw()
+    if self.animation then
+        self.animation:draw()
+    end
 end
 
 return Entity
