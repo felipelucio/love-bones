@@ -10,6 +10,9 @@ local Spritesheet = require('core.spritesheet')
 local Rect = require('core.rect')
 local Random = require('core.random')
 
+--- ACTIONS
+local MoveToAction = require('game.actions.move_to_action')
+
 ---@class TestScene
 ---@field world World
 ---@field camera Camera
@@ -51,46 +54,61 @@ end
 function TestScene:update(dt)
     Flux.update(dt)
 
+    local dest = self.hero.position:copy()
     if Input:isPressed("move_n") then
-        self.hero.position.y = self.hero.position.y - 1
+        dest.y = dest.y - 1
+
     elseif Input:isPressed("move_s") then
-        self.hero.position.y = self.hero.position.y + 1
+        dest.y = dest.y + 1
     end
 
     if Input:isPressed("move_w") then
-        self.hero.position.x = self.hero.position.x - 1
+        dest.x = dest.x - 1
     elseif Input:isPressed("move_e") then
-        self.hero.position.x = self.hero.position.x + 1
+        dest.x = dest.x + 1
     end
 
     if Input:isPressed("move_up") then
-        self.hero.position.z = self.hero.position.z - 1
+        dest.z = dest.z - 1
     elseif Input:isPressed("move_down") then
-        self.hero.position.z = self.hero.position.z + 1
+        dest.z = dest.z + 1
     end
 
-    local chunk = self.world:getChunk(self.hero.position)
-    for _, e in ipairs(chunk.entities) do
-        if e.animation ~= nil then
-            if Random.int(1, 10) > 8 then
-                if Random.int(1, 2) == 1 then
-                    if e.position.x + 1 < 100 then
-                        e.position.x = e.position.x + 1
-                    end
-                else
-                    if e.position.x - 1 > 1 then
-                        e.position.x = e.position.x - 1
-                    end
-                end
-            end
-            if Random.int(1, 10) > 8 then
-                if Random.int(1, 2) == 1 then
-                    if e.position.y + 1 < 100 then
-                        e.position.y = e.position.y + 1
-                    end
-                else
-                    if e.position.y - 1 > 1 then
-                        e.position.y = e.position.y - 1
+    if self.hero.position ~= dest then
+        self.world:queueAction(MoveToAction.new(self.hero, self.world:nextTick(0), dest))
+    end
+
+    for _, row in ipairs(self.world.chunks) do
+        for _, chunk in ipairs(row) do
+            if chunk.active then
+                for _, e in pairs(chunk.entities) do
+                    if e.animation ~= nil and e.id ~= self.hero.id then
+                        local dest = e.position:copy()
+                        if Random.int(1, 10) > 8 then
+                            if Random.int(1, 2) == 1 then
+                                if dest.x + 1 < 100 then
+                                    dest.x = dest.x + 1
+                                end
+                            else
+                                if dest.x - 1 > 1 then
+                                    dest.x = dest.x - 1
+                                end
+                            end
+                        end
+                        if Random.int(1, 10) > 8 then
+                            if Random.int(1, 2) == 1 then
+                                if dest.y + 1 < 100 then
+                                    dest.y = dest.y + 1
+                                end
+                            else
+                                if dest.y - 1 > 1 then
+                                    dest.y = dest.y - 1
+                                end
+                            end
+                        end
+                        if dest ~= e.position then
+                            self.world:queueAction(MoveToAction.new(e, self.world:nextTick(0), dest))
+                        end
                     end
                 end
             end

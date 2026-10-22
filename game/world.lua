@@ -2,6 +2,7 @@ local Render = require('core.render').getInstance()
 local Point = require('core.point')
 local Stack = require('core.stack')
 local Camera = require('game.camera')
+local EntityActionID = require('game.entity_action_id')
 ---------------------------------------
 ---------- WorldCell ------------------
 ---------------------------------------
@@ -158,7 +159,9 @@ end
 ---@field chunk_size integer
 ---@field camera Camera
 ---@field entities table<string, Entity>
+---@field entity_queue love.Channel
 ---@field hero Entity
+---@field tick integer
 local World = {}
 World.__index = World
 
@@ -173,8 +176,84 @@ function World.new()
         camera = Camera.new(Point.new(tW, tH, 1)),
         entities = {},
         hero = nil,
+        entity_queue = love.thread.getChannel('entity_queue'),
+        tick = 1,
     }, World)
     return o
+end
+
+---Get next tick number
+---@param offset? integer
+---@return integer
+function World:nextTick(offset)
+    offset = offset or 1
+    return self.tick + offset
+end
+
+---Thread-safely queue an EntityAction
+---@param channel love.Channel
+---@param world World
+---@param action EntityAction
+local function addAction(channel, world, action)
+    channel:push(action)
+end
+
+---Queue action in world
+---@param action EntityAction
+function World:queueAction(action)
+    local c = love.thread.getChannel('entity_queue')
+    c:performAtomic(addAction, self, action)
+end
+
+---Sort comparator for EntityAction queue
+---@param a EntityAction
+---@param b EntityAction
+---@return boolean
+local function sortActionQueue(a, b)
+    return a.tick < b.tick
+end
+
+---Thread-safely process the action queue
+---@param channel love.Channel
+---@param world World
+local function processActionQueue(channel, world)
+    local q = channel:pop()
+    local queue = {}
+    while q ~= nil do
+        table.insert(queue, q)
+        q = channel:pop()
+    end
+    table.sort(queue, sortActionQueue)
+    channel:clear()
+    for _, a in ipairs(queue) do
+        if a.tick <= world.tick then
+            world.processEntityAction(world, a)
+        else
+            world:queueAction(a)
+        end
+    end
+end
+
+---Process Queue action in world
+function World:processActionQueue()
+    local c = love.thread.getChannel('entity_queue')
+    c:performAtomic(processActionQueue, self)
+end
+
+---Process an EntityAction
+---@param action EntityAction
+function World:processEntityAction(action)
+    if action.action_id == EntityActionID.MOVE_TO then
+        action = action --[[@as MoveToAction]]
+        local ent = self:getEntity(action.entity_id)
+        if ent then
+            ent.position.x = action.dest.x
+            ent.position.y = action.dest.y
+            ent.position.z = action.dest.z
+        end
+    else
+        love.logger:error(("[World:processEntityAction] EntityAction #%d is not defined"):format(action.action_id))
+    end
 end
 
 ---Init map structure
@@ -261,6 +340,13 @@ function World:removeEntity(entity)
     end
 end
 
+---Get Entity by id
+---@param entity_id string
+---@return Entity
+function World:getEntity(entity_id)
+    return self.entities[entity_id]
+end
+
 ---Update the active chunks indicator
 ---@private
 function World:updateActiveChunks()
@@ -284,6 +370,7 @@ end
 ---@param dt number
 function World:update(dt)
     self:updateActiveChunks()
+    self:processActionQueue()
 
     for y = 1, #self.chunks do
         for x = 1, #self.chunks[y] do
