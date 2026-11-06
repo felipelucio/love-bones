@@ -1,5 +1,6 @@
+local constants = require('constants')
 local Flux = require('libs.flux.flux')
-local Point = require('core.point')
+local Camera = require('game.camera')
 
 ---@class Animation
 ---@field parent Entity
@@ -59,38 +60,6 @@ function Animation:getCurrentFrame()
         return self.animations[self.state].frames[self.curr_frame]
     end
     return nil
-end
-
----Update Animation
----@param dt number
-function Animation:update(dt)
-    self.time = self.time + dt
-    local curr_anim = self:getCurrentAnim()
-    if curr_anim then
-        if self.time >= 1/self.fps then
-            self.time = 0
-            self.curr_frame = self.curr_frame + 1
-            if self.curr_frame > #curr_anim.frames then
-                self.curr_frame = 1
-            end
-        end
-    end
-
-    local anim_pos = self.position
-    local ent_pos = self.parent.position:copy() * 16
-    if ent_pos.x ~= anim_pos.x or
-        ent_pos.y ~= anim_pos.y
-    then
-        local dest = { x = ent_pos.x, y = ent_pos.y }
-        self.tween = Flux.to(self.position, 0.2, dest)
-    end
-end
-
-function Animation:draw(offset)
-    local curr_frame = self.animations[self.state].frames[self.curr_frame]
-    if curr_frame then
-        love.graphics.draw(self.spritesheet:getTexture(), self.spritesheet:get(curr_frame), self.position.x, self.position.y)
-    end
 end
 
 return Animation

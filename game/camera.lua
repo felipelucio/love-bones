@@ -1,25 +1,33 @@
+local constants = require('constants')
 local Point = require('core.point')
-local Render = require('core.render').getInstance()
 
 ---@class Camera
 ---@field size Point
 ---@field position Point
 ---@field center Point
+---@field global_size Point
+---@field global_position Point
+---@field global_center Point
 ---@field follow Entity
 local Camera = {}
 Camera.__index = Camera
 
 ---Constructor
----@param size Point
+---@param global_size Point
 ---@return Camera
-function Camera.new(size)
+function Camera.new(global_size)
+    local size_tiles = global_size:copy()
+    size_tiles.x = math.ceil(global_size.x / constants.TILE_SIZE)
+    size_tiles.y = math.ceil(global_size.y / constants.TILE_SIZE)
     local o = setmetatable({
         follow = nil,
         position = Point.new(1, 1, 1),
         center = Point.new(1, 1, 1),
-        size = size,
+        size = size_tiles,
+        global_position = Point.new(1, 1, 1) * constants.TILE_SIZE,
+        global_center = Point.new(1, 1, 1) * constants.TILE_SIZE,
+        global_size = global_size,
     }, Camera)
-    o:moveTo(Point.new(1, 1, 1))
     return o
 end
 
@@ -29,25 +37,6 @@ function Camera:setFollow(entity)
     if entity and entity.position then
         self.follow = entity
     end
-end
-
----Update camera position
----@param dt number
-function Camera:update(dt)
-    if self.follow ~= nil then
-        self:moveTo(self.follow.position)
-    end
-end
-
----Move camera to position (centered)
----@param pos Point
-function Camera:moveTo(pos)
-    self.center.x = pos.x
-    self.center.y = pos.y
-    self.center.z = pos.z
-    self.position.x = pos.x - math.floor(self.size.x / 2)
-    self.position.y = pos.y - math.floor(self.size.y / 2)
-    self.position.z = pos.z
 end
 
 return Camera

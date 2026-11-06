@@ -1,136 +1,133 @@
---  Load image with alpha color
----@param imagePath string
----@param transR integer
----@param transG integer
----@param transB integer
----@return love.Image
-local function loadTransparent(imagePath, transR, transG, transB)
-	local imageData = love.image.newImageData(imagePath)
-	local function mapFunction(x, y, r, g, b, a)
-		local _ = x
-		local _ = y
-		if r == transR and g == transG and b == transB then
-			a = 0
-		end
-		return r, g, b, a
-	end
-	imageData:mapPixel(mapFunction)
-	return love.graphics.newImage(imageData)
+local constants = require('constants')
+local AssetManager = require('core.asset_manager').getInstance()
+local Spritesheet = require('core.spritesheet')
+local Utils = require('core.utils')
+local inspect = require('libs.inspect_lua.inspect')
+
+---@class Tile
+---@field id integer
+---@field spritesheet string
+---@field name string
+---@field description string
+---@field group string
+---@field frames table<string, table<integer>>
+---@field passable boolean
+---@field transparent boolean
+local Tile = {}
+Tile.__index = Tile
+
+---@class TileData
+---@field id integer
+---@field spritesheet string
+---@field name string
+---@field description string
+---@field group string
+---@field frames table<string, table<integer>>
+---@field passable boolean
+---@field transparent boolean
+
+---Constructor
+---@param spritesheet string
+---@param id integer
+---@param name string
+---@param description string
+---@param frames table<string, table<integer>>
+---@param passable? boolean
+---@param transparent? boolean
+---@return Tile
+function Tile.new(spritesheet, id, name, description, group, frames, passable, transparent)
+	return setmetatable({
+		id = id,
+		spritesheet = spritesheet,
+		name = name,
+		description = description,
+		group = group,
+		frames = frames or {},
+		passable = passable or false,
+		transparent = transparent or false,
+	}, Tile)
 end
 
----Regular grid tileset
+------------------------------------------------
+-------        TILESET         -----------------
+------------------------------------------------
+local instance = nil
+
 ---@class Tileset 
----@field private tile_w integer
----@field private tile_h integer
----@field private tilesheet love.Image
----@field private tiles table<love.Quad>
+---@field private spritesheets table<string, Spritesheet>
+---@field tiles table<Tile>
+---@field groups table<string, table<integer>>
 local Tileset = { class = "Tileset" }
 Tileset.__index = Tileset
 
----Constructor
----@param tile_w integer
----@param tile_h integer
----@param tilesheet love.Image
+---Get instance
 ---@return Tileset
-function Tileset.new(tile_w, tile_h, tilesheet)
+function Tileset.getInstance()
+	if not instance then
+		instance = Tileset.new()
+	end
+	return instance
+end
+
+---Constructor
+---@private
+---@return Tileset
+function Tileset.new()
 	local obj = setmetatable({
-		tile_w = tile_w,
-		tile_h = tile_h,
-		tilesheet = tilesheet,
+		spritesheets = {},
 		tiles = {},
+		groups = {},
 	}, Tileset)
 	return obj
 end
 
----Create Tileset based on an image
----@param imagepath string
----@param cols number
----@param rows number
----@param mask? Color
-function Tileset.loadImage(imagepath, cols, rows, mask)
-	local image
-	if mask ~= nil then
-		image = loadTransparent(imagepath, 1, 0, 1)
-	else
-		image = love.graphics.newImage(imagepath)
+---Load tile from file
+---@param tdata TileData
+---@return boolean
+function Tileset:loadTile(tdata)
+	if not self.spritesheets[tdata.spritesheet] then
+		self.spritesheets[tdata.spritesheet] = Spritesheet.loadImageSize(tdata.spritesheet, constants.TILE_SIZE, constants.TILE_SIZE)
 	end
-	local imgW, imgH = image:getDimensions()
-	local tsize_w = math.floor(imgW / cols)
-    local tsize_h = math.floor(imgH / rows)
-	local ts = Tileset.new(tsize_w, tsize_h, image)
-
-	for y = 0, rows - 1 do
-		for x = 0, cols - 1 do
-			table.insert(ts.tiles, love.graphics.newQuad(x * tsize_w, y * tsize_h, tsize_w, tsize_h, image))
-		end
+	local tile = Tile.new(tdata.spritesheet, tdata.id, tdata.name, tdata.description, tdata.group, tdata.frames, tdata.passable, tdata.transparent)
+	if not self.groups[tdata.group] then
+		self.groups[tdata.group] = {}
 	end
-	return ts
+	table.insert(self.groups[tdata.group], tile.id)
+	table.insert(self.tiles, tile)
+	return true
 end
 
----Create Tileset based on an image
----@param imagepath string
----@param frame_w integer
----@param frame_h integer
----@param mask? Color
-function Tileset.loadImageSize(imagepath, frame_w, frame_h, mask)
-	local image
-	if mask ~= nil then
-		image = loadTransparent(imagepath, 1, 0, 1)
-	else
-		image = love.graphics.newImage(imagepath)
+---Load file with TileData
+---@param filename string
+---@return Tileset|nil
+function Tileset:loadFile(filename)
+	local ok, data = Utils.runFile(filename)
+	if not ok then
+		love.logger:error(("[Tileset:loadFile] Unable to load '%s' file"):format(filename))
+		return nil
 	end
-	local imgW, imgH = image:getDimensions()
-	local cols = math.floor(imgW / frame_w)
-    local rows = math.floor(imgH / frame_h)
-	local ts = Tileset.new(frame_w, frame_h, image)
 
-	for y = 0, rows - 1 do
-		for x = 0, cols - 1 do
-			table.insert(ts.tiles, love.graphics.newQuad(x * frame_w, y * frame_h, frame_w, frame_h, image))
-		end
+---@diagnostic disable-next-line: param-type-mismatch
+	for _, tdata in ipairs(data) do
+		self:loadTile(tdata)
 	end
-	return ts
+	return self
 end
 
----Get a tile based on the internal id
----@param id integer
----@return love.Quad
-function Tileset:get(id)
-	local t = self.tiles[id]
-	if not t then
-		t = self.tiles[1]
-	end
-	return t
-end
-
----Get the tile width
----@return integer
-function Tileset:getTileWidth()
-	return self.tile_w
-end
-
----Get the tile height
----@return integer
-function Tileset:getTileHeight()
-	return self.tile_h
-end
-
----Get the tile size
----@return integer, integer
-function Tileset:getTileSize()
-	return self.tile_w, self.tile_h
-end
-
----Get the tilesheet texture
----@return love.Image
-function Tileset:getTexture()
-	return self.tilesheet
-end
-
----Get the total number of tiles
----@return integer
-function Tileset:getTileCount()
-	return #self.tiles
+---Draw a tile
+---@param tid integer
+---@param x integer
+---@param y integer
+---@param state? string
+---@param frame? integer
+function Tileset:draw(tid, x, y, state, frame)
+	state = state or 'default'
+	frame = frame or 1
+	local t = self.tiles[tid] --[[@as Tile]]
+	local ss = self.spritesheets[t.spritesheet]
+	local frs = t.frames[state]
+	local f = ss:get(frs[frame])
+	love.graphics.draw(ss:getTexture(), f, x, y)
 end
 
 return Tileset

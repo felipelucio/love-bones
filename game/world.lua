@@ -1,7 +1,6 @@
 local Render = require('core.render').getInstance()
 local Point = require('core.point')
 local Stack = require('core.stack')
-local Camera = require('game.camera')
 local EntityActionID = require('game.entity_action_id')
 ---------------------------------------
 ---------- WorldCell ------------------
@@ -17,6 +16,9 @@ local EntityActionID = require('game.entity_action_id')
 local WorldCell = {}
 WorldCell.__index = WorldCell
 
+---Constructor
+---@param chunk WorldChunk
+---@return WorldCell
 function WorldCell.new(chunk)
     return setmetatable({
         chunk = chunk,
@@ -121,14 +123,14 @@ end
 ---@param pos Point World Position
 ---@return WorldCell
 function WorldChunk:getCell(pos)
-    local posx = math.floor(pos.x / self.pos.x) + 1
-    local posy = math.floor(pos.y / self.pos.y) + 1
-    local posz = math.floor(pos.z / self.pos.z) + 1
+    local posx = pos.x - self.pos.x + 1
+    local posy = pos.y - self.pos.y + 1
+    local posz = pos.z
     if posx < 1 or posx > self.size.x
         or posy < 1 or posy > self.size.y
         or posz < 1 or posz > self.size.z
     then
-        love.logger:error("WorldChunk:getCell out of bounds")
+        love.logger:error(("WorldChunk:getCell (%d, %d, %d) is out of bounds"):format(posx, posy, posz))
     end
     return self.cells[posz][posy][posx]
 end
@@ -154,30 +156,35 @@ end
 --------------------------------
 
 ---@class World
+---@field tileset Tileset
 ---@field chunks table<table<WorldChunk>>
 ---@field size Point
 ---@field chunk_size integer
----@field camera Camera
 ---@field entities table<string, Entity>
----@field entity_queue love.Channel
+---@field action_queue table<EntityActionID, table<EntityAction>>
 ---@field hero Entity
+---@field camera Camera
 ---@field tick integer
+---@field entity_action_handlers table<EntityActionID, function<World, EntityAction>>
 local World = {}
 World.__index = World
 
 ---Constructor
+---@param tileset Tileset
+---@param camera Camera
 ---@return World
-function World.new()
-    local tW, tH = Render:getSizeTiles()
+function World.new(tileset, camera)
     local o = setmetatable({
+        tileset = tileset,
         chunks = {},
         size = Point.new(0, 0, 0),
         chunk_size = 0,
-        camera = Camera.new(Point.new(tW, tH, 1)),
+        camera = camera,
         entities = {},
         hero = nil,
-        entity_queue = love.thread.getChannel('entity_queue'),
+        action_queue = {},
         tick = 1,
+        entity_action_handlers = {},
     }, World)
     return o
 end
@@ -190,19 +197,13 @@ function World:nextTick(offset)
     return self.tick + offset
 end
 
----Thread-safely queue an EntityAction
----@param channel love.Channel
----@param world World
----@param action EntityAction
-local function addAction(channel, world, action)
-    channel:push(action)
-end
-
 ---Queue action in world
 ---@param action EntityAction
 function World:queueAction(action)
-    local c = love.thread.getChannel('entity_queue')
-    c:performAtomic(addAction, self, action)
+    if not self.action_queue[action.action_id] then
+        self.action_queue[action.action_id] = {}
+    end
+    table.insert(self.action_queue[action.action_id], action)
 end
 
 ---Sort comparator for EntityAction queue
@@ -213,47 +214,29 @@ local function sortActionQueue(a, b)
     return a.tick < b.tick
 end
 
----Thread-safely process the action queue
----@param channel love.Channel
----@param world World
-local function processActionQueue(channel, world)
-    local q = channel:pop()
-    local queue = {}
-    while q ~= nil do
-        table.insert(queue, q)
-        q = channel:pop()
-    end
-    table.sort(queue, sortActionQueue)
-    channel:clear()
-    for _, a in ipairs(queue) do
-        if a.tick <= world.tick then
-            world.processEntityAction(world, a)
-        else
-            world:queueAction(a)
-        end
-    end
-end
-
 ---Process Queue action in world
-function World:processActionQueue()
-    local c = love.thread.getChannel('entity_queue')
-    c:performAtomic(processActionQueue, self)
+---@param action_id EntityActionID
+function World:processActionQueue(action_id)
+    local queue = self.action_queue[action_id]
+    local handler = self.entity_action_handlers[action_id]
+    if queue and handler then
+        table.sort(queue, sortActionQueue)
+        self.action_queue[action_id] = {}
+        for _, a in ipairs(queue) do
+            if a.tick <= self.tick then
+                handler(self, a)
+            else
+                self:queueAction(a)
+            end
+        end
+    end
 end
 
----Process an EntityAction
----@param action EntityAction
-function World:processEntityAction(action)
-    if action.action_id == EntityActionID.MOVE_TO then
-        action = action --[[@as MoveToAction]]
-        local ent = self:getEntity(action.entity_id)
-        if ent then
-            ent.position.x = action.dest.x
-            ent.position.y = action.dest.y
-            ent.position.z = action.dest.z
-        end
-    else
-        love.logger:error(("[World:processEntityAction] EntityAction #%d is not defined"):format(action.action_id))
-    end
+---Register the entity action handler
+---@param entity_action_id EntityActionID
+---@param func function<World, EntityAction>
+function World:registerActionHandler(entity_action_id, func)
+    self.entity_action_handlers[entity_action_id] = func
 end
 
 ---Init map structure
@@ -270,7 +253,7 @@ function World:init(size, chunk_size)
         for x = 1, xchunks do
             self.chunks[y][x] = WorldChunk.new(
                 self,
-                Point.new(xchunks*chunk_size, ychunks*chunk_size, size.z),
+                Point.new(((x-1)*chunk_size)+1, ((y-1)*chunk_size)+1, size.z),
                 Point.new(chunk_size, chunk_size, size.z)
             )
         end
@@ -288,8 +271,11 @@ function World:getChunk(pos)
         love.logger:error(("World:getChunk (%d, %d, %d) is out of bounds!"):format(pos.x, pos.y, pos.z))
         return
     end
-    local x = math.ceil(pos.x / (self.chunk_size))
-    local y = math.ceil(pos.y / (self.chunk_size))
+    local x = math.ceil(pos.x / self.chunk_size)
+    local y = math.ceil(pos.y / self.chunk_size)
+    if x < 1 or x > #self.chunks or y < 1 or x > #self.chunks[1] then
+        love.logger:error(("World:getChunk Chunk (%d, %d) is out of bounds"):format(x, y))
+    end
     return self.chunks[y][x]
 end
 
@@ -300,6 +286,16 @@ function World:getCell(pos)
     local chunk = self:getChunk(pos)
     if chunk ~= nil then
         return chunk:getCell(pos)
+    end
+end
+
+---Set Cell tile_id
+---@param pos Point
+---@param tile_id integer
+function World:setCellTile(pos, tile_id)
+    local cell = self:getCell(pos)
+    if cell then
+        cell.tile_id = tile_id
     end
 end
 
@@ -326,7 +322,9 @@ function World:addEntity(entity)
     if self.entities[entity.id] == nil then
         self.entities[entity.id] = entity
         local chunk = self:getChunk(entity.position)
-        chunk:addEntity(entity)
+        if chunk ~= nil then
+            chunk:addEntity(entity)
+        end
     end
 end
 
@@ -368,34 +366,8 @@ end
 
 ---Update the world state
 ---@param dt number
-function World:update(dt)
+function World:updateChunks(dt)
     self:updateActiveChunks()
-    self:processActionQueue()
-
-    for y = 1, #self.chunks do
-        for x = 1, #self.chunks[y] do
-            local chunk = self.chunks[y][x]
-            if chunk and chunk.active then
-                for _, ent in pairs(chunk.entities) do
-                    ent:update(dt)
-                end
-            end
-        end
-    end
-end
-
----Draw the world
-function World:draw()
-    for y = 1, #self.chunks do
-        for x = 1, #self.chunks[y] do
-            local chunk = self.chunks[y][x]
-            if chunk and chunk.active then
-                for _, ent in pairs(chunk.entities) do
-                    ent:draw()
-                end
-            end
-        end
-    end
 end
 
 return World

@@ -85,6 +85,10 @@ function Utils.signum(x)
   return x>0 and 1 or x<0 and -1 or 0
 end
 
+---Safely load lua files
+---@param name string
+---@return boolean
+---@return table|string
 function Utils.runFile(name)
 	local ok, chunk, err = pcall(love.filesystem.load, name) -- load the chunk safely
 	if not ok    then  return false, "Failed loading code: "..chunk  end

@@ -9,27 +9,76 @@ local Input = require('core.input').getInstance()
 local Spritesheet = require('core.spritesheet')
 local Rect = require('core.rect')
 local Random = require('core.random')
+local Tileset = require('core.tileset').getInstance()
+
+--- SYSTEMS
+local inputSystem = require('game.systems.input_system')
+local updateAnimationSystem = require('game.systems.update_animation_system')
+local drawAnimationSystem = require('game.systems.draw_animation_system')
+local cameraSystem = require('game.systems.camera_system')
 
 --- ACTIONS
+local EntityActionID = require('game.entity_action_id')
 local MoveToAction = require('game.actions.move_to_action')
 
 ---@class TestScene
 ---@field world World
----@field camera Camera
 ---@field hero Entity
+---@field tileset Tileset
 local TestScene = {}
 TestScene.__index = TestScene
 
+---Handle Entity Actions
+---@param world World
+---@param action EntityAction
+function ActionHandler(world, action)
+    if action.action_id == EntityActionID.MOVE_TO then
+        
+    elseif action.action_id == EntityActionID.MOVE_BY then
+        
+    else
+        love.logger:error(("[World:processEntityAction] EntityAction #%d is not defined"):format(action.action_id))
+    end
+end
+
 function TestScene:init()
-    self.world = World.new()
+    local ts = Tileset:loadFile('assets/main_tileset.lua')
+    if not ts then
+        error()
+    end
+    self.tileset = ts
+    -- Camera
+    self.camera = Camera.new(Point.new(Render.internal_resolution_width, Render.internal_resolution_height, 1))
+    love.logger:setCamera(self.camera)
+    -- World
+    self.world = World.new(self.tileset, self.camera)
     self.world:init(Point.new(100, 100, 24), 20)
-    local spritesheet = Spritesheet.new("assets/sprites/warrior.png", {Rect.new(0, 0, 16, 16), Rect.new(16, 16, 16, 16)})
+    self.world:registerActionHandler(EntityActionID.MOVE_TO, function (world, action)
+        action = action --[[@as MoveByAction]]
+        local ent = world:getEntity(action.entity_id)
+        if ent then
+            ent.position.x = action.dest.x
+            ent.position.y = action.dest.y
+            ent.position.z = action.dest.z
+        end
+    end)
+    self.world:registerActionHandler(EntityActionID.MOVE_BY, function (world, action)
+        action = action --[[@as MoveByAction]]
+        local ent = world:getEntity(action.entity_id)
+        if ent then
+            ent.position.x = ent.position.x + action.dest.x
+            ent.position.y = ent.position.y + action.dest.y
+            ent.position.z = ent.position.z + action.dest.z
+        end
+    end)
+    -- Hero
+    local spritesheet = Spritesheet.loadImageSize("assets/sprites/warrior.png", 16, 16)
     self.hero = Entity.new()
+    self.hero.is_player = true
     self.hero.position = Point.new(1, 1, 1)
     self.hero.animation = Animation.new(self.hero, spritesheet, { idle = { frames = {1, 2}}}, 4)
+    self.world.hero = self.hero
     self.world:addEntity(self.hero)
-    local tW, tH = Render:getSizeTiles()
-    self.camera = Camera.new(Point.new(tW, tH, 1))
     self.camera:setFollow(self.hero)
 
     for i = 1, 100 do
@@ -49,34 +98,45 @@ function TestScene:init()
         -- enem.animation = Animation.new(enem, spritesheet, { idle = { frames = {1, 2}}}, 4)
         self.world:addEntity(enem)
     end
+
+    local p = Point.new(0, 0, 0)
+    for z = 1, 2 do
+        for y = 1, 100 do
+            for x = 1, 100 do
+                p.x = x
+                p.y = y
+                p.z = z
+                self.world:setCellTile(p, love.math.random(1, 5))
+            end
+        end
+    end
 end
 
 function TestScene:update(dt)
+    local entities = {}
+    for _, e in pairs(self.world.entities) do
+        table.insert(entities, e)
+    end
+    inputSystem(self.world, entities)
+
+    self.world:processActionQueue(EntityActionID.MOVE_TO)
+    self.world:processActionQueue(EntityActionID.MOVE_BY)
+
+    updateAnimationSystem(self.world, entities)
+    cameraSystem(self.world, {})
+
+    -- aiSystem(self.world, entities)
+    -- moveSystem(self.world, entities)
+    -- attackSystem(self.world, entities)
+
     Flux.update(dt)
-
-    local dest = self.hero.position:copy()
-    if Input:isPressed("move_n") then
-        dest.y = dest.y - 1
-
-    elseif Input:isPressed("move_s") then
-        dest.y = dest.y + 1
-    end
-
-    if Input:isPressed("move_w") then
-        dest.x = dest.x - 1
-    elseif Input:isPressed("move_e") then
-        dest.x = dest.x + 1
-    end
-
-    if Input:isPressed("move_up") then
-        dest.z = dest.z - 1
-    elseif Input:isPressed("move_down") then
-        dest.z = dest.z + 1
-    end
-
-    if self.hero.position ~= dest then
-        self.world:queueAction(MoveToAction.new(self.hero, self.world:nextTick(0), dest))
-    end
+    -- animationSystem(self.world, entities)
+    -- clockSystem(self.world)
+    -- itemDecaySystem(self.world, entities)
+    -- weatherSystem(self.world, entities)
+    -- respawnSystem(self.world, entities)
+    
+    -- cameraSystem(self.world)
 
     for _, row in ipairs(self.world.chunks) do
         for _, chunk in ipairs(row) do
@@ -114,9 +174,7 @@ function TestScene:update(dt)
             end
         end
     end
-    
-    self.camera:update(dt)
-    self.world:update(dt)
+    self.world:updateChunks(dt)
 end
 
 function TestScene:draw()
@@ -125,7 +183,28 @@ function TestScene:draw()
     local hero_text = ("Hero: (%d, %d, %d)"):format(self.hero.position.x, self.hero.position.y, self.hero.position.z)
     love.graphics.printf(hero_text, 10, 120, 200)
 
-    self.world:draw()
+    -- local offset = -8
+    -- local p = Point.new(0, 0, 0)
+    -- for z = 1, 2 do
+    --     for y = 1, math.floor(1280/16) do
+    --         for x = 1, math.floor(720/16) do
+    --             p.x = x
+    --             p.y = y
+    --             p.z = z
+    --             local c = self.world:getCell(p)
+    --             self.tileset:draw(c.tile_id, (x*16)+offset-16, (y*16)+offset-16)
+    --         end
+    --     end
+    --     offset = offset + 8
+    -- end
+
+    local entities = {}
+    for _, e in pairs(self.world.entities) do
+        table.insert(entities, e)
+    end
+    drawAnimationSystem(self.world, entities)
+    -- self.world:draw()
+    
 end
 
 return TestScene

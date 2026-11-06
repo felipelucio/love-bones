@@ -1,4 +1,3 @@
-local Tileset = require('core.tileset')
 local Settings = require('core.settings')
 local Utils = require('core.utils')
 
@@ -50,22 +49,16 @@ function AssetManager:loadSfx(alias, filepath)
     self.sfx[alias] = love.audio.newSource(filepath, "static")
 end
 
----Load tilesets
----@param alias string
----@param filepath string
----@param tile_w integer
----@param tile_h integer
-function AssetManager:loadTileset(alias, filepath, tile_w, tile_h)
-    local ts = Tileset.loadImageSize(filepath, tile_w, tile_h)
-    self.tilesets[alias] = ts
-end
-
 ---Load textures
 ---@param alias string
 ---@param filepath string
+---@return love.Image
 function AssetManager:loadTexture(alias, filepath)
-    local texture = love.graphics.newImage(filepath)
-    self.textures[alias] = texture
+    if not self.textures[alias] then
+        local texture = love.graphics.newImage(filepath)
+        self.textures[alias] = texture
+    end
+    return self.textures[alias]
 end
 
 ---Load messages
@@ -128,13 +121,6 @@ end
 ---@return love.Source
 function AssetManager:getSfx(alias)
     return self.sfx[alias]
-end
-
----Get tileset asset
----@param alias string
----@return Tileset
-function AssetManager:getTileset(alias)
-    return self.tilesets[alias]
 end
 
 ---Get texture asset

@@ -18,6 +18,19 @@ function Point.new(x, y, z)
     }, Point)
 end
 
+---Squared length (most performant)
+---@return integer
+function Point:len2()
+	return (self.x * self.x) + (self.y * self.y) + (self.z * self.z)
+end
+
+---Real length
+---@return integer
+function Point:len()
+	local sq = self:len2()
+	return math.sqrt(sq)
+end
+
 ---Return a copy to the point
 ---@return Point
 function Point:copy()

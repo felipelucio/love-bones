@@ -10,6 +10,7 @@ local Point = require('core.point')
 ---@field animation Animation
 ---@field item Item
 ---@field container Container
+---@field is_player boolean
 local Entity = {}
 Entity.__index = Entity
 
@@ -18,6 +19,7 @@ Entity.__index = Entity
 function Entity.new()
     return setmetatable({
         id = Lume.uuid(),
+        is_player = false,
         position = Point.new(0, 0, 0),
         size = Point.new(0, 0, 0),
         actor = nil,
@@ -33,18 +35,6 @@ end
 ---@return boolean
 function Entity:hasComponent(comp)
    return self[comp] ~= nil
-end
-
-function Entity:update(dt)
-    if self.animation then
-        self.animation:update(dt)
-    end
-end
-
-function Entity:draw()
-    if self.animation then
-        self.animation:draw()
-    end
 end
 
 return Entity

@@ -3,6 +3,7 @@ local LogOpt = require("core.log").LogOptions
 local log_conf = LogOpt.default()
 table.insert(log_conf.drivers, "console")
 log_conf.canvas.mem_size = "k"
+log_conf.canvas.show_camera = true
 love.logger = Log.new(log_conf)
 
 local GameState = require('libs.hump.gamestate')
@@ -18,6 +19,8 @@ Input:registerAction("move_down", {"down"})
 local TestScene = require('scenes.test_scene')
 
 function love.load()
+    love.window.setMode(1280, 720)
+    love.graphics.setDefaultFilter("nearest", "nearest")
     GameState.switch(TestScene)
     --GameState.registerEvents()
 end
