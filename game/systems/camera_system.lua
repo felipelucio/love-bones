@@ -1,4 +1,5 @@
 local constants = require('constants')
+local Render = require('core.render').getInstance()
 
 ---Update Camera state
 ---@param world World
@@ -14,8 +15,8 @@ return function (world, entities)
             cam.position.y = cam.follow.position.y - math.floor(cam.size.y / 2)
             cam.position.z = cam.follow.position.z
             
-            cam.global_center = cam.center * constants.TILE_SIZE
-            cam.global_position = cam.position * constants.TILE_SIZE
+            cam.global_center = cam.center * (constants.TILE_SIZE * Render.zoom_factor)
+            cam.global_position = cam.position * (constants.TILE_SIZE * Render.zoom_factor)
         end
     end
 end

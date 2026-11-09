@@ -1,9 +1,11 @@
 local constants = require('constants')
+local Render = require('core.render').getInstance()
 
----Draw Animation state
+---Draw Animation
 ---@param world World
 ---@param entities table<Entity>
 return function (world, entities)
+    local cam = world.camera
     for _, ent in ipairs(entities) do
         ent = ent --[[@as Entity]]
         if ent.animation then
@@ -16,7 +18,8 @@ return function (world, entities)
                 love.graphics.draw(
                     anim.spritesheet:getTexture(),
                     anim.spritesheet:get(curr_frame),
-                    anim.position.x-world.camera.global_position.x, anim.position.y-world.camera.global_position.y
+                    (anim.position.x-cam.global_position.x), (anim.position.y-cam.global_position.y),
+                    nil, Render.zoom_factor, Render.zoom_factor
                 )
             end
         end

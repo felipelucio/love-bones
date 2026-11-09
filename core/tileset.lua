@@ -120,14 +120,16 @@ end
 ---@param y integer
 ---@param state? string
 ---@param frame? integer
-function Tileset:draw(tid, x, y, state, frame)
+---@param zoom? integer
+function Tileset:draw(tid, x, y, state, frame, zoom)
 	state = state or 'default'
 	frame = frame or 1
+	zoom = zoom or 1
 	local t = self.tiles[tid] --[[@as Tile]]
 	local ss = self.spritesheets[t.spritesheet]
 	local frs = t.frames[state]
 	local f = ss:get(frs[frame])
-	love.graphics.draw(ss:getTexture(), f, x, y)
+	love.graphics.draw(ss:getTexture(), f, x*zoom, y*zoom, nil, zoom, zoom)
 end
 
 return Tileset

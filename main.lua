@@ -1,3 +1,4 @@
+local constants = require('constants')
 local Log = require("core.log").Log
 local LogOpt = require("core.log").LogOptions
 local log_conf = LogOpt.default()
@@ -6,6 +7,7 @@ log_conf.canvas.mem_size = "k"
 log_conf.canvas.show_camera = true
 love.logger = Log.new(log_conf)
 
+local Render = require('core.render').getInstance()
 local GameState = require('libs.hump.gamestate')
 
 local Input = require('core.input').getInstance()
@@ -16,11 +18,12 @@ Input:registerAction("move_w", {"a"})
 Input:registerAction("move_up", {"up"})
 Input:registerAction("move_down", {"down"})
 
-local TestScene = require('scenes.test_scene')
-
 function love.load()
     love.window.setMode(1280, 720)
+    Render:setInternalResolution(constants.INTERNAL_RES_W, constants.INTERNAL_RES_H)
     love.graphics.setDefaultFilter("nearest", "nearest")
+    
+    local TestScene = require('scenes.test_scene')
     GameState.switch(TestScene)
     --GameState.registerEvents()
 end

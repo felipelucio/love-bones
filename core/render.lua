@@ -16,13 +16,12 @@ Render.__index = Render
 ---@return Render
 function Render.getInstance()
     if not instance then
-        local win_w, win_h = love.window.getDesktopDimensions()
         instance = setmetatable({
             internal_resolution_width = constants.INTERNAL_RES_W,
             internal_resolution_height = constants.INTERNAL_RES_H,
-            window_width = win_w,
-            window_height = win_h,
-            tile_size = 16,
+            window_width = love.graphics.getWidth(),
+            window_height = love.graphics.getHeight(),
+            tile_size = constants.TILE_SIZE,
             zoom_factor = 1.0,
         }, Render)
         instance:recalc()
@@ -32,6 +31,8 @@ end
 
 ---Recalculate the rendering zoom factor
 function Render:recalc()
+    self.window_width = love.graphics.getWidth()
+    self.window_height = love.graphics.getHeight()
     self.zoom_factor = self.window_width / self.internal_resolution_width
 end
 
@@ -40,15 +41,15 @@ end
 ---@param h integer
 function Render:setInternalResolution(w, h)
     self.internal_resolution_width = w
-    self.internal_resolution_height = w
+    self.internal_resolution_height = h
     self:recalc()
 end
 
 ---Return how many tiles fit in screen
 ---@return integer, integer
 function Render:getSizeTiles()
-    return math.ceil(self.internal_resolution_width / self.tile_size),
-        math.ceil(self.internal_resolution_height / self.tile_size)
+    return math.ceil(self.window_width / (self.tile_size * self.zoom_factor)),
+        math.ceil(self.window_height / (self.tile_size * self.zoom_factor))
 end
 
 return Render

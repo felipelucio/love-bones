@@ -1,5 +1,6 @@
 local constants = require('constants')
 local Flux = require('libs.flux.flux')
+local Render = require('core.render').getInstance()
 
 ---update Animation state
 ---@param world World
@@ -22,7 +23,7 @@ return function (world, entities)
             end
 
             local anim_pos = anim.position
-            local ent_pos = anim.parent.position:copy() * constants.TILE_SIZE
+            local ent_pos = anim.parent.position:copy() * constants.TILE_SIZE * Render.zoom_factor
             if ent_pos.x ~= anim_pos.x or
                 ent_pos.y ~= anim_pos.y
             then

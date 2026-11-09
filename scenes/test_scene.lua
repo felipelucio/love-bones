@@ -15,6 +15,7 @@ local Tileset = require('core.tileset').getInstance()
 local inputSystem = require('game.systems.input_system')
 local updateAnimationSystem = require('game.systems.update_animation_system')
 local drawAnimationSystem = require('game.systems.draw_animation_system')
+local drawTilemapSystem = require('game.systems.draw_tilemap_system')
 local cameraSystem = require('game.systems.camera_system')
 
 --- ACTIONS
@@ -47,12 +48,16 @@ function TestScene:init()
         error()
     end
     self.tileset = ts
+    
     -- Camera
-    self.camera = Camera.new(Point.new(Render.internal_resolution_width, Render.internal_resolution_height, 1))
+    local win_w, win_h = love.window.getDesktopDimensions()
+    --local win_w, win_h = Render.internal_resolution_width, Render.internal_resolution_height
+    self.camera = Camera.new()
     love.logger:setCamera(self.camera)
+
     -- World
     self.world = World.new(self.tileset, self.camera)
-    self.world:init(Point.new(100, 100, 24), 20)
+    self.world:init(Point.new(200, 200, 24), 20)
     self.world:registerActionHandler(EntityActionID.MOVE_TO, function (world, action)
         action = action --[[@as MoveByAction]]
         local ent = world:getEntity(action.entity_id)
@@ -71,6 +76,7 @@ function TestScene:init()
             ent.position.z = ent.position.z + action.dest.z
         end
     end)
+
     -- Hero
     local spritesheet = Spritesheet.loadImageSize("assets/sprites/warrior.png", 16, 16)
     self.hero = Entity.new()
@@ -101,8 +107,8 @@ function TestScene:init()
 
     local p = Point.new(0, 0, 0)
     for z = 1, 2 do
-        for y = 1, 100 do
-            for x = 1, 100 do
+        for y = 1, 200 do
+            for x = 1, 200 do
                 p.x = x
                 p.y = y
                 p.z = z
@@ -178,25 +184,16 @@ function TestScene:update(dt)
 end
 
 function TestScene:draw()
-    local cam_text = ("Camera: (%d, %d, %d)"):format(self.camera.position.x, self.camera.position.y, self.camera.position.z)
-    love.graphics.printf(cam_text, 10, 100, 200)
-    local hero_text = ("Hero: (%d, %d, %d)"):format(self.hero.position.x, self.hero.position.y, self.hero.position.z)
-    love.graphics.printf(hero_text, 10, 120, 200)
+    -- local cam_text = ("Camera: (%d, %d, %d)"):format(self.camera.position.x, self.camera.position.y, self.camera.position.z)
+    -- love.graphics.printf(cam_text, 10, 100, 200)
+    -- local hero_text = ("Hero: (%d, %d, %d)"):format(self.hero.position.x, self.hero.position.y, self.hero.position.z)
+    -- love.graphics.printf(hero_text, 10, 120, 200)
 
-    -- local offset = -8
-    -- local p = Point.new(0, 0, 0)
-    -- for z = 1, 2 do
-    --     for y = 1, math.floor(1280/16) do
-    --         for x = 1, math.floor(720/16) do
-    --             p.x = x
-    --             p.y = y
-    --             p.z = z
-    --             local c = self.world:getCell(p)
-    --             self.tileset:draw(c.tile_id, (x*16)+offset-16, (y*16)+offset-16)
-    --         end
-    --     end
-    --     offset = offset + 8
-    -- end
+	-- love.graphics.push()
+    -- love.graphics.scale(Render.zoom_factor, Render.zoom_factor)
+
+    -- Draw the map
+    drawTilemapSystem(self.world, self.tileset)
 
     local entities = {}
     for _, e in pairs(self.world.entities) do
@@ -204,6 +201,7 @@ function TestScene:draw()
     end
     drawAnimationSystem(self.world, entities)
     -- self.world:draw()
+    -- love.graphics.pop()
     
 end
 

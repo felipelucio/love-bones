@@ -1,11 +1,11 @@
 local constants = require('constants')
 local Point = require('core.point')
+local Render = require('core.render').getInstance()
 
 ---@class Camera
 ---@field size Point
 ---@field position Point
 ---@field center Point
----@field global_size Point
 ---@field global_position Point
 ---@field global_center Point
 ---@field follow Entity
@@ -13,20 +13,17 @@ local Camera = {}
 Camera.__index = Camera
 
 ---Constructor
----@param global_size Point
 ---@return Camera
-function Camera.new(global_size)
-    local size_tiles = global_size:copy()
-    size_tiles.x = math.ceil(global_size.x / constants.TILE_SIZE)
-    size_tiles.y = math.ceil(global_size.y / constants.TILE_SIZE)
+function Camera.new()
+    local tsw, tsh = Render:getSizeTiles()
     local o = setmetatable({
         follow = nil,
         position = Point.new(1, 1, 1),
         center = Point.new(1, 1, 1),
-        size = size_tiles,
+        size = Point.new(tsw, tsh, 1),
         global_position = Point.new(1, 1, 1) * constants.TILE_SIZE,
         global_center = Point.new(1, 1, 1) * constants.TILE_SIZE,
-        global_size = global_size,
+        global_size = Point.new(Render.internal_resolution_width, Render.internal_resolution_height, 1),
     }, Camera)
     return o
 end
