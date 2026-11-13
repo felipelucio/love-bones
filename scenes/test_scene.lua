@@ -1,12 +1,10 @@
-local Render = require('core.render').getInstance()
+local GUI = require('gui.main').GetInstance()
 local Point = require('core.point')
 local World = require('game.world')
 local Entity = require('game.entity')
 local Animation = require('game.components.animation')
 local Camera = require('game.camera')
-local Input = require('core.input').getInstance()
 local Spritesheet = require('core.spritesheet')
-local Rect = require('core.rect')
 local Random = require('core.random')
 local Tileset = require('core.tileset').getInstance()
 
@@ -20,6 +18,11 @@ local cameraSystem = require('game.systems.camera_system')
 --- ACTIONS
 local EntityActionID = require('game.entity_action_id')
 local MoveToAction = require('game.actions.move_to_action')
+local MoveByAction = require('game.actions.move_by_action')
+
+--- ACTION HANDLERS
+local moveToHandler = require('game.systems.action_handlers.move_to_handler')
+local moveByHandler = require('game.systems.action_handlers.move_by_handler')
 
 ---@class TestScene
 ---@field world World
@@ -28,26 +31,13 @@ local MoveToAction = require('game.actions.move_to_action')
 local TestScene = {}
 TestScene.__index = TestScene
 
----Handle Entity Actions
----@param world World
----@param action EntityAction
-function ActionHandler(world, action)
-    if action.action_id == EntityActionID.MOVE_TO then
-        
-    elseif action.action_id == EntityActionID.MOVE_BY then
-        
-    else
-        love.logger:error(("[World:processEntityAction] EntityAction #%d is not defined"):format(action.action_id))
-    end
-end
-
 function TestScene:init()
     local ts = Tileset:loadFile('assets/main_tileset.lua')
     if not ts then
         error()
     end
     self.tileset = ts
-    
+
     -- Camera
     self.camera = Camera.new()
     love.logger:setCamera(self.camera)
@@ -55,24 +45,8 @@ function TestScene:init()
     -- World
     self.world = World.new(self.tileset, self.camera)
     self.world:init(Point.new(200, 200, 24), 20)
-    self.world:registerActionHandler(EntityActionID.MOVE_TO, function (world, action)
-        action = action --[[@as MoveByAction]]
-        local ent = world:getEntity(action.entity_id)
-        if ent then
-            ent.position.x = action.dest.x
-            ent.position.y = action.dest.y
-            ent.position.z = action.dest.z
-        end
-    end)
-    self.world:registerActionHandler(EntityActionID.MOVE_BY, function (world, action)
-        action = action --[[@as MoveByAction]]
-        local ent = world:getEntity(action.entity_id)
-        if ent then
-            ent.position.x = ent.position.x + action.dest.x
-            ent.position.y = ent.position.y + action.dest.y
-            ent.position.z = ent.position.z + action.dest.z
-        end
-    end)
+    self.world:registerActionHandler(EntityActionID.MOVE_TO, moveToHandler)
+    self.world:registerActionHandler(EntityActionID.MOVE_BY, moveByHandler)
 
     -- Hero
     local spritesheet = Spritesheet.loadImageSize("assets/sprites/warrior.png", 16, 16)
@@ -178,17 +152,10 @@ function TestScene:update(dt)
         end
     end
     self.world:updateChunks(dt)
+    GUI:update(dt)
 end
 
 function TestScene:draw()
-    -- local cam_text = ("Camera: (%d, %d, %d)"):format(self.camera.position.x, self.camera.position.y, self.camera.position.z)
-    -- love.graphics.printf(cam_text, 10, 100, 200)
-    -- local hero_text = ("Hero: (%d, %d, %d)"):format(self.hero.position.x, self.hero.position.y, self.hero.position.z)
-    -- love.graphics.printf(hero_text, 10, 120, 200)
-
-	-- love.graphics.push()
-    -- love.graphics.scale(Render.zoom_factor, Render.zoom_factor)
-
     -- Draw the map
     drawTilemapSystem(self.world, self.tileset)
 
@@ -197,9 +164,35 @@ function TestScene:draw()
         table.insert(entities, e)
     end
     drawAnimationSystem(self.world, entities)
-    -- self.world:draw()
-    -- love.graphics.pop()
-    
+    GUI:draw()
+end
+
+function TestScene:keypressed(key, scancode, isrepeat)
+    GUI:keypressed(key, scancode, isrepeat)
+end
+function TestScene:textinput(text)
+    GUI:textinput(text)
+end
+function TestScene:mousepressed(x, y, button, istouch, presses)
+    GUI:mousepressed(x, y, button, istouch, presses)
+end
+function TestScene:mousereleased(x, y, button, istouch, presses)
+    GUI:mousereleased(x, y, button, istouch, presses)
+end
+function TestScene:mousemoved(x, y, dx, dy, istouch)
+    GUI:mousemoved(x, y, dx, dy, istouch)
+end
+function TestScene:wheelmoved(dx, dy)
+    GUI:wheelmoved(dx, dy)
+end
+function TestScene:joystickhat(joystick, hat, direction)
+    GUI:joystickhat(joystick, hat, direction)
+end
+function TestScene:joystickpressed(joystick, button)
+    GUI:joystickpressed(joystick, button)
+end
+function TestScene:resize(w, h)
+    GUI:resize(w, h)
 end
 
 return TestScene

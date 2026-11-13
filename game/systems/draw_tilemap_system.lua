@@ -12,7 +12,7 @@ return function (world, tileset)
     xtiles = xtiles + 2
     ytiles = ytiles + 2
 
-    local offset = ((constants.TILE_SIZE / 4) * Render.zoom_factor)
+    local offset = constants.TILE_SIZE
     -- draw layer below
     love.graphics.setColor(1, 1, 1, 0.2)
     for y = -3, ytiles do
@@ -27,9 +27,9 @@ return function (world, tileset)
             local c = world:getCell(p)
             if c and c.tile_id ~= nil then
                 tileset:draw(
-                    c.tile_id, 
-                    (p.x*constants.TILE_SIZE)-cam.global_center.x+(cam.size.x * constants.TILE_SIZE)-offset,
-                    (p.y*constants.TILE_SIZE)-cam.global_center.y+(cam.size.y * constants.TILE_SIZE)-offset,
+                    c.tile_id,
+                    (p.x*constants.TILE_SIZE)-cam.global_center.x-offset,
+                    (p.y*constants.TILE_SIZE)-cam.global_center.y-offset,
                     nil, nil, Render.zoom_factor)
             end
             ::continue::
