@@ -98,6 +98,7 @@ end
 ---@field public show_duration boolean Display the duration since the application start. Default: false
 ---@field public show_mouse_pos boolean Display the mouse position coordinates. Default: false
 ---@field public show_camera boolean Display the camera position coordinates. Default: false
+---@field public show_player boolean Display the player position coordinates. Default: false
 local LogConsoleOptions = {}
 
 ---Constructor
@@ -111,6 +112,7 @@ function LogConsoleOptions.default()
 		show_duration = false,
 		show_mouse_pos = false,
 		show_camera = false,
+		show_player = false,
 	}
 end
 
@@ -123,12 +125,14 @@ end
 ---@field public show_fps boolean Display the FPS. Default: true
 ---@field public show_mem boolean Display the memory usage. Default: true
 ---@field public show_camera boolean Display the camera position. Default: false
+---@field public show_player boolean Display the player position. Default: false
 ---@field public show_delta boolean Display the delta time between current and last frame. Default: true
 ---@field public show_duration boolean Display the duration since the application start. Default: true
 ---@field public show_mouse_pos boolean Display the mouse position coordinates. Default: true
 ---@field public mem_size string Select the unit that the memory usage will be displayed. "b" = bytes, "k" = kilobytes, "m" = megabytes, "g" = gigabytes. Default: "k"
 ---@field public show_level boolean Enable or disable the coresponding level tag before the log entry
 ---@field public camera Camera
+---@field public entity Entity
 local LogCanvasOptions = {}
 
 ---Constructor
@@ -148,6 +152,7 @@ function LogCanvasOptions.default()
 		show_level = true,
 		show_camera = false,
 		camera = nil,
+		entity = nil,
 	}
 end
 
@@ -303,6 +308,13 @@ function LogCanvasDriver:draw()
 		local p = self.options.canvas.camera.position
 		local g = self.options.canvas.camera.global_position
 		love.graphics.print(string.format("Camera: P(%d, %d, %d) G(%d, %d, %d)", p.x, p.y, p.z, g.x, g.y, g.z), pos_x, curr_y)
+	end
+
+	if self.options.canvas.show_player and self.options.canvas.entity then
+		line = line + 1
+		curr_y = pos_y + (line - 1) * self.options.canvas.font_size
+		local p = self.options.canvas.entity.position
+		love.graphics.print(string.format("Player: P(%d, %d, %d)", p.x, p.y, p.z), pos_x, curr_y)
 	end
 
 	line = line + 1
@@ -471,6 +483,12 @@ end
 ---@param camera Camera
 function Log:setCamera(camera)
 	self.options.canvas.camera = camera
+end
+
+---Set player
+---@param entity Entity
+function Log:setPlayer(entity)
+	self.options.canvas.entity = entity
 end
 
 ---Add a message to the log

@@ -5,6 +5,7 @@ local log_conf = LogOpt.default()
 table.insert(log_conf.drivers, "console")
 log_conf.canvas.mem_size = "k"
 log_conf.canvas.show_camera = true
+log_conf.canvas.show_player = true
 love.logger = Log.new(log_conf)
 
 local Render = require('core.render').getInstance()

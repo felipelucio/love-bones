@@ -9,22 +9,53 @@ return function (world, tileset)
     local cam = world.camera
     local p = Point.new(0, 0, 0)
     local xtiles, ytiles = Render:getSizeTiles()
-    for z = 0, 1 do
-        for y = 0, ytiles do
-            for x = 0, xtiles do
-                p.x = cam.position.x + x
-                p.y = cam.position.y + y
-                p.z = cam.position.z + z
-                -- love.graphics.rectangle("line", x*constants.TILE_SIZE* Render.zoom_factor, y*constants.TILE_SIZE* Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor)
-                if p.x < 1 or p.x > world.size.x or p.y < 1 or p.y > world.size.y then
-                    goto continue
-                end
-                local c = world:getCell(p)
-                if c then
-                    tileset:draw(c.tile_id, x*constants.TILE_SIZE, y*constants.TILE_SIZE, nil, nil, Render.zoom_factor)
-                end
-                ::continue::
+    xtiles = xtiles + 2
+    ytiles = ytiles + 2
+
+    local offset = ((constants.TILE_SIZE / 4) * Render.zoom_factor)
+    -- draw layer below
+    love.graphics.setColor(1, 1, 1, 0.2)
+    for y = -3, ytiles do
+        for x = -3, xtiles do
+            p.x = math.floor(cam.position.x) + x
+            p.y = math.floor(cam.position.y) + y
+            p.z = cam.position.z + 1
+            -- love.graphics.rectangle("line", x*constants.TILE_SIZE* Render.zoom_factor, y*constants.TILE_SIZE* Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor)
+            if p.x < 1 or p.x > world.size.x or p.y < 1 or p.y > world.size.y then
+                goto continue
             end
+            local c = world:getCell(p)
+            if c and c.tile_id ~= nil then
+                tileset:draw(
+                    c.tile_id, 
+                    (p.x*constants.TILE_SIZE)-cam.global_center.x+(cam.size.x * constants.TILE_SIZE)-offset,
+                    (p.y*constants.TILE_SIZE)-cam.global_center.y+(cam.size.y * constants.TILE_SIZE)-offset,
+                    nil, nil, Render.zoom_factor)
+            end
+            ::continue::
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
+
+    -- draw the actual layer camera is in
+    for y = -3, ytiles do
+        for x = -3, xtiles do
+            p.x = math.floor(cam.position.x) + x
+            p.y = math.floor(cam.position.y) + y
+            p.z = cam.position.z
+            -- love.graphics.rectangle("line", x*constants.TILE_SIZE* Render.zoom_factor, y*constants.TILE_SIZE* Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor, constants.TILE_SIZE * Render.zoom_factor)
+            if p.x < 1 or p.x > world.size.x or p.y < 1 or p.y > world.size.y then
+                goto continue
+            end
+            local c = world:getCell(p)
+            if c and c.tile_id ~= nil then
+                tileset:draw(
+                    c.tile_id,
+                    (p.x*constants.TILE_SIZE)-cam.global_center.x,
+                    (p.y*constants.TILE_SIZE)-cam.global_center.y,
+                    nil, nil, Render.zoom_factor)
+            end
+            ::continue::
         end
     end
 end

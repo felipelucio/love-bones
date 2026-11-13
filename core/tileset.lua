@@ -126,6 +126,9 @@ function Tileset:draw(tid, x, y, state, frame, zoom)
 	frame = frame or 1
 	zoom = zoom or 1
 	local t = self.tiles[tid] --[[@as Tile]]
+	if not t then
+		return
+	end
 	local ss = self.spritesheets[t.spritesheet]
 	local frs = t.frames[state]
 	local f = ss:get(frs[frame])

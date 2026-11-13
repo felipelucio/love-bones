@@ -1,6 +1,4 @@
 local constants = require('constants')
-local Flux = require('libs.flux.flux')
-local Camera = require('game.camera')
 
 ---@class Animation
 ---@field parent Entity

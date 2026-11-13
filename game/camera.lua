@@ -9,6 +9,7 @@ local Render = require('core.render').getInstance()
 ---@field global_position Point
 ---@field global_center Point
 ---@field follow Entity
+---@field tween any
 local Camera = {}
 Camera.__index = Camera
 
@@ -18,12 +19,13 @@ function Camera.new()
     local tsw, tsh = Render:getSizeTiles()
     local o = setmetatable({
         follow = nil,
-        position = Point.new(1, 1, 1),
-        center = Point.new(1, 1, 1),
+        position = Point.new(0, 0, 0),
+        center = Point.new(0, 0, 0),
         size = Point.new(tsw, tsh, 1),
-        global_position = Point.new(1, 1, 1) * constants.TILE_SIZE,
-        global_center = Point.new(1, 1, 1) * constants.TILE_SIZE,
+        global_position = Point.new(0, 0, 0),
+        global_center = Point.new(0, 0, 0),
         global_size = Point.new(Render.internal_resolution_width, Render.internal_resolution_height, 1),
+        tween = nil,
     }, Camera)
     return o
 end

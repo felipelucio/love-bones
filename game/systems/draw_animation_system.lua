@@ -18,7 +18,8 @@ return function (world, entities)
                 love.graphics.draw(
                     anim.spritesheet:getTexture(),
                     anim.spritesheet:get(curr_frame),
-                    (anim.position.x-cam.global_position.x), (anim.position.y-cam.global_position.y),
+                    ((anim.position.x * constants.TILE_SIZE)-cam.global_center.x) * Render.zoom_factor,
+                    ((anim.position.y * constants.TILE_SIZE)-cam.global_center.y) * Render.zoom_factor,
                     nil, Render.zoom_factor, Render.zoom_factor
                 )
             end

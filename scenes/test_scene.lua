@@ -1,4 +1,3 @@
-local Flux = require('libs.flux.flux')
 local Render = require('core.render').getInstance()
 local Point = require('core.point')
 local World = require('game.world')
@@ -50,8 +49,6 @@ function TestScene:init()
     self.tileset = ts
     
     -- Camera
-    local win_w, win_h = love.window.getDesktopDimensions()
-    --local win_w, win_h = Render.internal_resolution_width, Render.internal_resolution_height
     self.camera = Camera.new()
     love.logger:setCamera(self.camera)
 
@@ -86,6 +83,7 @@ function TestScene:init()
     self.world.hero = self.hero
     self.world:addEntity(self.hero)
     self.camera:setFollow(self.hero)
+    love.logger:setPlayer(self.hero)
 
     for i = 1, 100 do
         local enem = Entity.new()
@@ -128,14 +126,13 @@ function TestScene:update(dt)
     self.world:processActionQueue(EntityActionID.MOVE_TO)
     self.world:processActionQueue(EntityActionID.MOVE_BY)
 
-    updateAnimationSystem(self.world, entities)
-    cameraSystem(self.world, {})
+    updateAnimationSystem(self.world, entities, dt)
+    cameraSystem(self.world, {}, dt)
 
     -- aiSystem(self.world, entities)
     -- moveSystem(self.world, entities)
     -- attackSystem(self.world, entities)
 
-    Flux.update(dt)
     -- animationSystem(self.world, entities)
     -- clockSystem(self.world)
     -- itemDecaySystem(self.world, entities)
