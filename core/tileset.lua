@@ -135,4 +135,11 @@ function Tileset:draw(tid, x, y, state, frame, zoom)
 	love.graphics.draw(ss:getTexture(), f, x*zoom, y*zoom, nil, zoom, zoom)
 end
 
+---Get tileset definition
+---@param tile_id integer
+---@return Tile|nil
+function Tileset:get(tile_id)
+	return self.tiles[tile_id]
+end
+
 return Tileset

@@ -13,12 +13,14 @@ function GUI.GetInstance()
     if not instance then
         instance = setmetatable({
             layoutmanager = LOVELi.LayoutManager:new({})
-                :with(LOVELi.AbsoluteLayout:new{ width = 250, height = 250, margin = LOVELi.Thickness.parse(10) }
-                    :with(LOVELi.Button:new{ text = "Top Left", horizontaltextalignment = "center", verticaltextalignment = "center", x = 0, y = 0, width = 75, height = 23 } )
-                )
         }, GUI)
     end
     return instance
+end
+
+function GUI:open(panel)
+    GUI.GetInstance()
+    self.layoutmanager = panel:draw()
 end
 
 function GUI:keypressed(key, scancode, isrepeat)
@@ -51,7 +53,7 @@ end
 function GUI:update(dt)
     self.layoutmanager:update(dt)
 end
-function GUI:draw()	
+function GUI:draw()
     self.layoutmanager:draw()
 end
 

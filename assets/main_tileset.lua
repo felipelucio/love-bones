@@ -15,19 +15,19 @@ return {
         id = 2,
         spritesheet = "assets/environment/tiles_caves.png",
         name = "wall",
-        description = "The ground",
-        group = "terrain",
+        description = "Wall",
+        group = "wall",
         frames = {
             default = { 2 },
         },
-        passable = true,
+        passable = false,
         transparent = false,
     },
     {
         id = 3,
         spritesheet = "assets/environment/tiles_caves.png",
-        name = "wall2",
-        description = "The ground",
+        name = "ground2",
+        description = "The ground2",
         group = "terrain",
         frames = {
             default = { 3 },
@@ -38,8 +38,8 @@ return {
     {
         id = 4,
         spritesheet = "assets/environment/tiles_caves.png",
-        name = "wall3",
-        description = "The ground",
+        name = "ground3",
+        description = "The ground 3",
         group = "terrain",
         frames = {
             default = { 4 },
@@ -50,8 +50,8 @@ return {
     {
         id = 5,
         spritesheet = "assets/environment/tiles_caves.png",
-        name = "wall4",
-        description = "The ground",
+        name = "ground4",
+        description = "The ground 4",
         group = "terrain",
         frames = {
             default = { 5 },
@@ -59,4 +59,16 @@ return {
         passable = true,
         transparent = false,
     },
+    {
+        id = 6,
+        spritesheet = "assets/environment/tiles_caves.png",
+        name = "wall5",
+        description = "The ground 5",
+        group = "terrain",
+        frames = {
+            default = { 5 },
+        },
+        passable = true,
+        transparent = false,
+    }
 }

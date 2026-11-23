@@ -3,9 +3,12 @@ local Point = require('core.point')
 local MoveByAction = require('game.actions.move_by_action')
 
 ---handle Inputs
+---@param dt number
 ---@param world World
----@param entities table<Entity>
-return function (world, entities)
+return function (dt, world)
+    Input:update(dt, world.camera)
+
+    -- Movement
     local dest = Point.new(0, 0, 0)
     if Input:isPressed("move_n") then
         dest.y = -1

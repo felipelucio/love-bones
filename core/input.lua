@@ -1,3 +1,6 @@
+local Point = require('core.point')
+local Render = require('core.render').getInstance()
+
 local instance = nil
 
 ---@class InputAction
@@ -32,6 +35,7 @@ end
 
 ---@class Input
 ---@field actions table<string, table<string>>
+---@field mouse_tile_position Point
 local Input = {}
 Input.__index = Input
 
@@ -41,9 +45,31 @@ function Input.getInstance()
     if instance == nil then
         instance = setmetatable({
             actions = {},
+            mouse_tile_position = Point.new(-1, -1, -1),
         }, Input)
     end
     return instance
+end
+
+---Update Input state
+---@param dt number
+---@param camera? Camera
+function Input:update(dt, camera)
+    local rposx, rposy = love.mouse.getPosition()
+    if camera ~= nil then
+        self.mouse_tile_position.x = math.floor((rposx + (camera.global_center.x * Render.zoom_factor)) / (Render.tile_size * Render.zoom_factor))
+        self.mouse_tile_position.y = math.floor((rposy + (camera.global_center.y * Render.zoom_factor)) / (Render.tile_size * Render.zoom_factor))
+        self.mouse_tile_position.z = camera.position.z
+    else
+        self.mouse_tile_position.x = rposx
+        self.mouse_tile_position.y = rposy
+    end
+end
+
+---Get the tile position under mouse pointer
+---@return Point
+function Input:getMouseTile()
+    return self.mouse_tile_position
 end
 
 ---Check if action is pressed

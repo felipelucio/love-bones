@@ -14,6 +14,7 @@ local updateAnimationSystem = require('game.systems.update_animation_system')
 local drawAnimationSystem = require('game.systems.draw_animation_system')
 local drawTilemapSystem = require('game.systems.draw_tilemap_system')
 local cameraSystem = require('game.systems.camera_system')
+local tileMouseSystem = require('game.systems.tile_mouse_system')
 
 --- ACTIONS
 local EntityActionID = require('game.entity_action_id')
@@ -23,6 +24,9 @@ local MoveByAction = require('game.actions.move_by_action')
 --- ACTION HANDLERS
 local moveToHandler = require('game.systems.action_handlers.move_to_handler')
 local moveByHandler = require('game.systems.action_handlers.move_by_handler')
+
+--- GUI
+local GUITileEditor = require('gui.tile_editor.tile_editor')
 
 ---@class TestScene
 ---@field world World
@@ -37,6 +41,8 @@ function TestScene:init()
         error()
     end
     self.tileset = ts
+
+    -- GUI:open(GUITileEditor.new())
 
     -- Camera
     self.camera = Camera.new()
@@ -95,7 +101,7 @@ function TestScene:update(dt)
     for _, e in pairs(self.world.entities) do
         table.insert(entities, e)
     end
-    inputSystem(self.world, entities)
+    inputSystem(dt, self.world)
 
     self.world:processActionQueue(EntityActionID.MOVE_TO)
     self.world:processActionQueue(EntityActionID.MOVE_BY)
@@ -164,6 +170,7 @@ function TestScene:draw()
         table.insert(entities, e)
     end
     drawAnimationSystem(self.world, entities)
+    tileMouseSystem(self.world)
     GUI:draw()
 end
 
