@@ -6,7 +6,7 @@ local inspect = require('libs.inspect_lua.inspect')
 
 ---@class Tile
 ---@field id integer
----@field spritesheet string
+---@field spritesheet integer
 ---@field name string
 ---@field description string
 ---@field group string
@@ -18,7 +18,7 @@ Tile.__index = Tile
 
 ---@class TileData
 ---@field id integer
----@field spritesheet string
+---@field spritesheet integer
 ---@field name string
 ---@field description string
 ---@field group string
@@ -27,7 +27,7 @@ Tile.__index = Tile
 ---@field transparent boolean
 
 ---Constructor
----@param spritesheet string
+---@param spritesheet integer
 ---@param id integer
 ---@param name string
 ---@param description string
@@ -54,7 +54,7 @@ end
 local instance = nil
 
 ---@class Tileset 
----@field private spritesheets table<string, Spritesheet>
+---@field private spritesheets table<Spritesheet>
 ---@field tiles table<Tile>
 ---@field groups table<string, table<integer>>
 local Tileset = { class = "Tileset" }
@@ -85,9 +85,6 @@ end
 ---@param tdata TileData
 ---@return boolean
 function Tileset:loadTile(tdata)
-	if not self.spritesheets[tdata.spritesheet] then
-		self.spritesheets[tdata.spritesheet] = Spritesheet.loadImageSize(tdata.spritesheet, constants.TILE_SIZE, constants.TILE_SIZE)
-	end
 	local tile = Tile.new(tdata.spritesheet, tdata.id, tdata.name, tdata.description, tdata.group, tdata.frames, tdata.passable, tdata.transparent)
 	if not self.groups[tdata.group] then
 		self.groups[tdata.group] = {}
@@ -107,8 +104,12 @@ function Tileset:loadFile(filename)
 		return nil
 	end
 
+	for _, ssdata in ipairs(data.spritesheets) do
+		table.insert(self.spritesheets, Spritesheet.loadImageSize(ssdata.texture, constants.TILE_SIZE, constants.TILE_SIZE))
+	end
+
 ---@diagnostic disable-next-line: param-type-mismatch
-	for _, tdata in ipairs(data) do
+	for _, tdata in ipairs(data.tiles) do
 		self:loadTile(tdata)
 	end
 	return self
